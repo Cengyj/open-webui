@@ -495,7 +495,7 @@ def _resolve_user_direct_image_credentials(form_data, user) -> tuple[str | None,
     if url_idx >= len(urls) or url_idx >= len(keys):
         return None, None
 
-    api_config = configs.get(str(url_idx), {}) if isinstance(configs, dict) else {}
+    api_config = configs.get(str(url_idx), configs.get(url_idx, {})) if isinstance(configs, dict) else {}
     if api_config and api_config.get('enable') is False:
         return None, None
 

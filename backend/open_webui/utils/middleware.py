@@ -1763,6 +1763,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
     image_generation_options = features.get('image_generation_options') or {}
     if not isinstance(image_generation_options, dict):
         image_generation_options = {}
+    source_model_item = extra_params.get('__model__') or metadata.get('model') or {}
 
     if not chat_id or not isinstance(chat_id, str) or not __event_emitter__:
         return form_data
@@ -1809,7 +1810,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                         'image': input_images,
                         **image_generation_options,
                         'source_model': form_data.get('model'),
-                        'source_model_item': form_data.get('model_item'),
+                        'source_model_item': source_model_item,
                     }
                 ),
                 metadata={
@@ -1905,7 +1906,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                         'prompt': prompt,
                         **image_generation_options,
                         'source_model': form_data.get('model'),
-                        'source_model_item': form_data.get('model_item'),
+                        'source_model_item': source_model_item,
                     }
                 ),
                 metadata={
