@@ -466,20 +466,14 @@ def _clean_optional_string(value):
     return None
 
 
-def _resolve_user_direct_image_credentials(form_data, user) -> tuple[str | None, str | None]:
-    ui_settings = _get_user_ui_settings(user)
-    direct_connections = ui_settings.get('directConnections') or {}
-    if not isinstance(direct_connections, dict):
-        return None, None
+def _clean_api_base_url(value):
+    value = _clean_optional_string(value)
+    if value and (value.startswith('http://') or value.startswith('https://')):
+        return value.rstrip('/')
+    return None
 
-    source_model_item = form_data.source_model_item or {}
-    if not isinstance(source_model_item, dict) or not source_model_item.get('direct'):
-        return None, None
 
-    url_idx = source_model_item.get('urlIdx')
-    if url_idx is None:
-        return None, None
-
+def _resolve_direct_connection_by_index(direct_connections: dict, url_idx) -> tuple[str | None, str | None]:
     try:
         url_idx = int(url_idx)
     except (TypeError, ValueError):
@@ -499,12 +493,37 @@ def _resolve_user_direct_image_credentials(form_data, user) -> tuple[str | None,
     if api_config and api_config.get('enable') is False:
         return None, None
 
-    return _clean_optional_string(urls[url_idx]), _clean_optional_string(keys[url_idx])
+    return _clean_api_base_url(urls[url_idx]), _clean_optional_string(keys[url_idx])
+
+
+def _resolve_user_direct_image_credentials(form_data, user) -> tuple[str | None, str | None]:
+    ui_settings = _get_user_ui_settings(user)
+    direct_connections = ui_settings.get('directConnections') or {}
+    if not isinstance(direct_connections, dict):
+        return None, None
+
+    source_model_item = form_data.source_model_item or {}
+    if isinstance(source_model_item, dict) and source_model_item.get('urlIdx') is not None:
+        api_base_url, api_key = _resolve_direct_connection_by_index(
+            direct_connections,
+            source_model_item.get('urlIdx'),
+        )
+        if api_base_url and api_key:
+            return api_base_url, api_key
+
+    urls = direct_connections.get('OPENAI_API_BASE_URLS') or []
+    keys = direct_connections.get('OPENAI_API_KEYS') or []
+    for url_idx in range(min(len(urls), len(keys))):
+        api_base_url, api_key = _resolve_direct_connection_by_index(direct_connections, url_idx)
+        if api_base_url and api_key:
+            return api_base_url, api_key
+
+    return None, None
 
 
 def _resolve_openai_image_config(request: Request, form_data, user, *, edit: bool = False) -> dict:
     image_settings = _get_user_image_settings(user)
-    custom_base_url = _clean_optional_string(image_settings.get('apiBaseUrl'))
+    custom_base_url = _clean_api_base_url(image_settings.get('apiBaseUrl'))
     custom_api_key = _clean_optional_string(image_settings.get('apiKey'))
 
     api_base_url = None
