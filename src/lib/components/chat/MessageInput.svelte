@@ -153,7 +153,22 @@
 		return value === 'auto' ? 'Auto' : value.replace('x', '×');
 	};
 	const formatImageQuality = (value: string) => {
-		return value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Auto';
+		return (
+			{
+				auto: '自动',
+				low: '低',
+				medium: '中',
+				high: '高'
+			}[value] ?? '自动'
+		);
+	};
+	const formatImageBackground = (value: string) => {
+		return (
+			{
+				auto: '自动',
+				opaque: '不透明'
+			}[value] ?? '自动'
+		);
 	};
 
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
@@ -1870,28 +1885,28 @@
 													<button
 														type="button"
 														class="h-8 max-w-[15rem] flex items-center gap-2 rounded-full px-3 text-xs text-sky-700 dark:text-sky-200 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/20 border border-sky-200/50 dark:border-sky-500/20 transition-colors focus:outline-hidden"
-														aria-label={$i18n.t('Image generation options')}
+														aria-label="图片生成参数"
 													>
-														<span class="font-medium shrink-0">{$i18n.t('Image')}</span>
+														<span class="font-medium shrink-0">图片</span>
 														<span class="truncate text-sky-600/80 dark:text-sky-200/80">
 															{formatImageOption(imageGenerationOptions.size)} · {formatImageQuality(
 																imageGenerationOptions.quality
-															)} · {formatImageQuality(imageGenerationOptions.background)}
+															)} · {formatImageBackground(imageGenerationOptions.background)}
 														</span>
 													</button>
 
 													<div slot="content" class="space-y-3">
 														<div class="flex items-center justify-between gap-2">
 															<div>
-																<div class="text-sm font-medium">{$i18n.t('Image options')}</div>
+																<div class="text-sm font-medium">图片参数</div>
 																<div class="text-xs text-gray-500 dark:text-gray-400">
-																	{$i18n.t('Used for this image request')}
+																	仅用于本次生图请求
 																</div>
 															</div>
 														</div>
 
 														<div class="space-y-2">
-															<div class="text-xs font-medium text-gray-500 dark:text-gray-400">{$i18n.t('Size')}</div>
+															<div class="text-xs font-medium text-gray-500 dark:text-gray-400">分辨率</div>
 															<div class="grid grid-cols-2 gap-1.5">
 																{#each imageSizes as size}
 																	<button
@@ -1909,7 +1924,7 @@
 
 														<div class="grid grid-cols-2 gap-3">
 															<div class="space-y-2">
-																<div class="text-xs font-medium text-gray-500 dark:text-gray-400">{$i18n.t('Quality')}</div>
+																<div class="text-xs font-medium text-gray-500 dark:text-gray-400">质量</div>
 																<div class="grid gap-1.5">
 																	{#each imageQualities as quality}
 																		<button
@@ -1926,7 +1941,7 @@
 															</div>
 
 															<div class="space-y-2">
-																<div class="text-xs font-medium text-gray-500 dark:text-gray-400">{$i18n.t('Background')}</div>
+																<div class="text-xs font-medium text-gray-500 dark:text-gray-400">背景</div>
 																<div class="grid gap-1.5">
 																	{#each imageBackgrounds as background}
 																		<button
@@ -1936,7 +1951,7 @@
 																				: 'hover:bg-gray-50 dark:hover:bg-gray-800'}"
 																			on:click={() => (imageGenerationOptions.background = background)}
 																		>
-																			{formatImageQuality(background)}
+																			{formatImageBackground(background)}
 																		</button>
 																	{/each}
 																</div>
