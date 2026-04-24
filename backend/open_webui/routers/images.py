@@ -434,9 +434,126 @@ class CreateImageForm(BaseModel):
     n: int = 1
     steps: Optional[int] = None
     negative_prompt: Optional[str] = None
+    quality: Optional[str] = None
+    background: Optional[str] = None
+    source_model: Optional[str] = None
+    source_model_item: Optional[dict] = None
 
 
 GenerateImageForm = CreateImageForm  # Alias for backward compatibility
+
+
+def _get_user_ui_settings(user) -> dict:
+    settings = getattr(user, 'settings', None)
+    if settings is None:
+        return {}
+    if hasattr(settings, 'model_dump'):
+        settings = settings.model_dump()
+    if not isinstance(settings, dict):
+        return {}
+    return settings.get('ui') or {}
+
+
+def _get_user_image_settings(user) -> dict:
+    image_settings = _get_user_ui_settings(user).get('imageGeneration') or {}
+    return image_settings if isinstance(image_settings, dict) else {}
+
+
+def _clean_optional_string(value):
+    if isinstance(value, str):
+        value = value.strip()
+        return value if value else None
+    return None
+
+
+def _resolve_user_direct_image_credentials(form_data, user) -> tuple[str | None, str | None]:
+    ui_settings = _get_user_ui_settings(user)
+    direct_connections = ui_settings.get('directConnections') or {}
+    if not isinstance(direct_connections, dict):
+        return None, None
+
+    source_model_item = form_data.source_model_item or {}
+    if not isinstance(source_model_item, dict) or not source_model_item.get('direct'):
+        return None, None
+
+    url_idx = source_model_item.get('urlIdx')
+    if url_idx is None:
+        return None, None
+
+    try:
+        url_idx = int(url_idx)
+    except (TypeError, ValueError):
+        return None, None
+
+    urls = direct_connections.get('OPENAI_API_BASE_URLS') or []
+    keys = direct_connections.get('OPENAI_API_KEYS') or []
+    configs = direct_connections.get('OPENAI_API_CONFIGS') or {}
+
+    if url_idx >= len(urls) or url_idx >= len(keys):
+        return None, None
+
+    api_config = configs.get(str(url_idx), {}) if isinstance(configs, dict) else {}
+    if api_config and api_config.get('enable') is False:
+        return None, None
+
+    return _clean_optional_string(urls[url_idx]), _clean_optional_string(keys[url_idx])
+
+
+def _resolve_openai_image_config(request: Request, form_data, user, *, edit: bool = False) -> dict:
+    image_settings = _get_user_image_settings(user)
+    custom_base_url = _clean_optional_string(image_settings.get('apiBaseUrl'))
+    custom_api_key = _clean_optional_string(image_settings.get('apiKey'))
+
+    api_base_url = None
+    api_key = None
+
+    if custom_base_url and custom_api_key:
+        api_base_url = custom_base_url
+        api_key = custom_api_key
+    else:
+        api_base_url, api_key = _resolve_user_direct_image_credentials(form_data, user)
+
+    if not api_base_url or not api_key:
+        if getattr(user, 'role', None) == 'admin':
+            return {
+                'api_base_url': request.app.state.config.IMAGES_EDIT_OPENAI_API_BASE_URL
+                if edit
+                else request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
+                'api_key': request.app.state.config.IMAGES_EDIT_OPENAI_API_KEY
+                if edit
+                else request.app.state.config.IMAGES_OPENAI_API_KEY,
+                'api_version': request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION
+                if edit
+                else request.app.state.config.IMAGES_OPENAI_API_VERSION,
+                'params': request.app.state.config.IMAGES_OPENAI_API_PARAMS if not edit else {},
+            }
+
+        raise HTTPException(
+            status_code=400,
+            detail=ERROR_MESSAGES.DEFAULT(
+                'Image generation requires your own API key. Configure a direct chat connection or set Image Generation API URL and API Key in user settings.'
+            ),
+        )
+
+    return {
+        'api_base_url': api_base_url.rstrip('/'),
+        'api_key': api_key,
+        'api_version': _clean_optional_string(image_settings.get('apiVersion')) or '',
+        'params': image_settings.get('params') if isinstance(image_settings.get('params'), dict) else {},
+    }
+
+
+def _resolve_image_option(request: Request, form_data, user, key: str, global_value=None):
+    image_settings = _get_user_image_settings(user)
+    value = getattr(form_data, key, None)
+    if value is not None and value != '':
+        return value
+
+    value = _clean_optional_string(image_settings.get(key))
+    if value is not None:
+        return value
+
+    return global_value
 
 
 async def get_image_data(data: str, headers=None):
@@ -533,54 +650,65 @@ async def image_generations(
     # This is only relevant when the user has set IMAGE_SIZE to 'auto' with an
     # image model other than gpt-image-1, which is warned about on settings save
 
-    size = '512x512'
-    if request.app.state.config.IMAGE_SIZE and 'x' in request.app.state.config.IMAGE_SIZE:
-        size = request.app.state.config.IMAGE_SIZE
+    requested_size = _resolve_image_option(
+        request,
+        form_data,
+        user,
+        'size',
+        request.app.state.config.IMAGE_SIZE,
+    )
 
-    if form_data.size and 'x' in form_data.size:
-        size = form_data.size
+    size = requested_size if requested_size and 'x' in requested_size else '512x512'
 
     width, height = tuple(map(int, size.split('x')))
 
     metadata = metadata or {}
 
-    model = await get_image_model(request)
+    model = _resolve_image_option(
+        request,
+        form_data,
+        user,
+        'model',
+        form_data.model or await get_image_model(request),
+    )
 
     try:
         if request.app.state.config.IMAGE_GENERATION_ENGINE == 'openai':
+            openai_image_config = _resolve_openai_image_config(request, form_data, user)
             headers = {
-                'Authorization': f'Bearer {request.app.state.config.IMAGES_OPENAI_API_KEY}',
+                'Authorization': f"Bearer {openai_image_config['api_key']}",
                 'Content-Type': 'application/json',
             }
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:
                 headers = include_user_info_headers(headers, user)
 
-            url = f'{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations'
-            if request.app.state.config.IMAGES_OPENAI_API_VERSION:
-                url = f'{url}?api-version={request.app.state.config.IMAGES_OPENAI_API_VERSION}'
+            url = f"{openai_image_config['api_base_url']}/images/generations"
+            if openai_image_config['api_version']:
+                url = f"{url}?api-version={openai_image_config['api_version']}"
+
+            requested_quality = _resolve_image_option(request, form_data, user, 'quality')
+            requested_background = _resolve_image_option(request, form_data, user, 'background')
 
             data = {
                 'model': model,
                 'prompt': form_data.prompt,
                 'n': form_data.n,
-                **(
-                    {'size': form_data.size or request.app.state.config.IMAGE_SIZE}
-                    if (form_data.size or request.app.state.config.IMAGE_SIZE)
-                    else {}
-                ),
+                **({'size': requested_size} if requested_size else {}),
+                **({'quality': requested_quality} if requested_quality else {}),
+                **({'background': requested_background} if requested_background else {}),
                 **(
                     {}
                     if re.match(
                         IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
-                        request.app.state.config.IMAGE_GENERATION_MODEL,
+                        model,
                     )
                     else {'response_format': 'b64_json'}
                 ),
                 **(
                     {}
-                    if not request.app.state.config.IMAGES_OPENAI_API_PARAMS
-                    else request.app.state.config.IMAGES_OPENAI_API_PARAMS
+                    if not openai_image_config['params']
+                    else openai_image_config['params']
                 ),
             }
 
@@ -779,6 +907,8 @@ class EditImageForm(BaseModel):
     n: Optional[int] = None
     negative_prompt: Optional[str] = None
     background: Optional[str] = None
+    source_model: Optional[str] = None
+    source_model_item: Optional[dict] = None
 
 
 @router.post('/edit')
@@ -798,7 +928,13 @@ async def image_edits(
         size = form_data.size if form_data.size else request.app.state.config.IMAGE_EDIT_SIZE
         width, height = tuple(map(int, size.split('x')))
 
-    model = request.app.state.config.IMAGE_EDIT_MODEL if form_data.model is None else form_data.model
+    model = _resolve_image_option(
+        request,
+        form_data,
+        user,
+        'model',
+        request.app.state.config.IMAGE_EDIT_MODEL if form_data.model is None else form_data.model,
+    )
 
     try:
 
@@ -860,24 +996,27 @@ async def image_edits(
 
     try:
         if request.app.state.config.IMAGE_EDIT_ENGINE == 'openai':
+            openai_image_config = _resolve_openai_image_config(request, form_data, user, edit=True)
             headers = {
-                'Authorization': f'Bearer {request.app.state.config.IMAGES_EDIT_OPENAI_API_KEY}',
+                'Authorization': f"Bearer {openai_image_config['api_key']}",
             }
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:
                 headers = include_user_info_headers(headers, user)
+
+            requested_background = _resolve_image_option(request, form_data, user, 'background')
 
             data = {
                 'model': model,
                 'prompt': form_data.prompt,
                 **({'n': form_data.n} if form_data.n else {}),
                 **({'size': size} if size else {}),
-                **({'background': form_data.background} if form_data.background else {}),
+                **({'background': requested_background} if requested_background else {}),
                 **(
                     {}
                     if re.match(
                         IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
-                        request.app.state.config.IMAGE_EDIT_MODEL,
+                        model,
                     )
                     else {'response_format': 'b64_json'}
                 ),
@@ -891,8 +1030,8 @@ async def image_edits(
                     files.append(get_image_file_item(img, 'image[]'))
 
             url_search_params = ''
-            if request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION:
-                url_search_params += f'?api-version={request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION}'
+            if openai_image_config['api_version']:
+                url_search_params += f"?api-version={openai_image_config['api_version']}"
 
             # Build multipart form data for aiohttp
             form = aiohttp.FormData()
@@ -911,7 +1050,7 @@ async def image_edits(
 
             session = await get_session()
             async with session.post(
-                url=f'{request.app.state.config.IMAGES_EDIT_OPENAI_API_BASE_URL}/images/edits{url_search_params}',
+                url=f"{openai_image_config['api_base_url']}/images/edits{url_search_params}",
                 headers=headers,
                 data=form,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,

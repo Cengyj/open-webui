@@ -17,10 +17,12 @@
 	import Search from '../icons/Search.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import Connections from './Settings/Connections.svelte';
+	import ImageGeneration from './Settings/ImageGeneration.svelte';
 	import Integrations from './Settings/Integrations.svelte';
 	import DatabaseSettings from '../icons/DatabaseSettings.svelte';
 	import SettingsAlt from '../icons/SettingsAlt.svelte';
 	import Link from '../icons/Link.svelte';
+	import Photo from '../icons/Photo.svelte';
 	import UserCircle from '../icons/UserCircle.svelte';
 	import SoundHigh from '../icons/SoundHigh.svelte';
 	import InfoCircle from '../icons/InfoCircle.svelte';
@@ -239,6 +241,20 @@
 				'openterminal',
 				'terminal',
 				'settings'
+			]
+		},
+		{
+			id: 'image_generation',
+			title: 'Image Generation',
+			keywords: [
+				'image',
+				'image generation',
+				'image api',
+				'image model',
+				'image size',
+				'quality',
+				'background',
+				'api key'
 			]
 		},
 
@@ -507,6 +523,13 @@
 				);
 			}
 
+			if (tab.id === 'image_generation') {
+				return (
+					$config?.features?.enable_image_generation &&
+					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
+				);
+			}
+
 			return true;
 		});
 	};
@@ -706,6 +729,30 @@
 									<div class=" self-center">{$i18n.t('Connections')}</div>
 								</button>
 							{/if}
+						{:else if tabId === 'image_generation'}
+							<button
+								role="tab"
+								aria-controls="tab-image_generation"
+								aria-selected={selectedTab === 'image_generation'}
+								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'image_generation'
+										? ($settings?.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings?.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
+								on:click={() => {
+									selectedTab = 'image_generation';
+								}}
+							>
+								<div class=" self-center mr-2">
+									<Photo strokeWidth="2" />
+								</div>
+								<div class=" self-center">{$i18n.t('Image Generation')}</div>
+							</button>
 						{:else if tabId === 'tools'}
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
 								<button
@@ -899,6 +946,13 @@
 					/>
 				{:else if selectedTab === 'connections'}
 					<Connections
+						saveSettings={async (updated) => {
+							await saveSettings(updated);
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{:else if selectedTab === 'image_generation'}
+					<ImageGeneration
 						saveSettings={async (updated) => {
 							await saveSettings(updated);
 							toast.success($i18n.t('Settings saved successfully!'));

@@ -261,6 +261,7 @@ async def generate_image(
     prompt: str,
     __request__: Request = None,
     __user__: dict = None,
+    __model__: dict = None,
     __event_emitter__: callable = None,
     __chat_id__: str = None,
     __message_id__: str = None,
@@ -279,7 +280,11 @@ async def generate_image(
 
         images = await image_generations(
             request=__request__,
-            form_data=CreateImageForm(prompt=prompt),
+            form_data=CreateImageForm(
+                prompt=prompt,
+                source_model=(__model__ or {}).get('id'),
+                source_model_item=__model__,
+            ),
             user=user,
         )
 
@@ -327,6 +332,7 @@ async def edit_image(
     image_urls: list[str],
     __request__: Request = None,
     __user__: dict = None,
+    __model__: dict = None,
     __event_emitter__: callable = None,
     __chat_id__: str = None,
     __message_id__: str = None,
@@ -346,7 +352,12 @@ async def edit_image(
 
         images = await image_edits(
             request=__request__,
-            form_data=EditImageForm(prompt=prompt, image=image_urls),
+            form_data=EditImageForm(
+                prompt=prompt,
+                image=image_urls,
+                source_model=(__model__ or {}).get('id'),
+                source_model_item=__model__,
+            ),
             user=user,
         )
 

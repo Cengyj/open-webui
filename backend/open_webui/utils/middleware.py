@@ -1799,7 +1799,14 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
         try:
             images = await image_edits(
                 request=request,
-                form_data=EditImageForm(**{'prompt': prompt, 'image': input_images}),
+                form_data=EditImageForm(
+                    **{
+                        'prompt': prompt,
+                        'image': input_images,
+                        'source_model': form_data.get('model'),
+                        'source_model_item': form_data.get('model_item'),
+                    }
+                ),
                 metadata={
                     'chat_id': metadata.get('chat_id', None),
                     'message_id': metadata.get('message_id', None),
@@ -1888,7 +1895,13 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
         try:
             images = await image_generations(
                 request=request,
-                form_data=CreateImageForm(**{'prompt': prompt}),
+                form_data=CreateImageForm(
+                    **{
+                        'prompt': prompt,
+                        'source_model': form_data.get('model'),
+                        'source_model_item': form_data.get('model_item'),
+                    }
+                ),
                 metadata={
                     'chat_id': metadata.get('chat_id', None),
                     'message_id': metadata.get('message_id', None),
