@@ -485,6 +485,9 @@ def _resolve_user_direct_image_credentials(form_data, user) -> tuple[str | None,
     except (TypeError, ValueError):
         return None, None
 
+    if url_idx < 0:
+        return None, None
+
     urls = direct_connections.get('OPENAI_API_BASE_URLS') or []
     keys = direct_connections.get('OPENAI_API_KEYS') or []
     configs = direct_connections.get('OPENAI_API_CONFIGS') or {}
@@ -919,6 +922,20 @@ async def image_edits(
     metadata: Optional[dict] = None,
     user=Depends(get_verified_user),
 ):
+    if not request.app.state.config.ENABLE_IMAGE_GENERATION or not request.app.state.config.ENABLE_IMAGE_EDIT:
+        raise HTTPException(
+            status_code=403,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.image_generation', request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     size = None
     width, height = None, None
     metadata = metadata or {}

@@ -25,9 +25,10 @@
 	};
 
 	onMount(() => {
+		const { size, quality, background, ...imageGenerationSettings } = $settings?.imageGeneration ?? {};
 		config = {
 			...config,
-			...($settings?.imageGeneration ?? {})
+			...imageGenerationSettings
 		};
 	});
 </script>
