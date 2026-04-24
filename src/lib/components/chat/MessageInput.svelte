@@ -145,6 +145,7 @@
 	export let pendingOAuthTools = [];
 
 	let showTerminalMenu = false;
+	let showImageOptionsDropdown = false;
 	const imageSizes = ['auto', '1024x1024', '1536x1024', '1024x1536', '2048x2048', '3840x2160', '2160x3840'];
 	const imageQualities = ['auto', 'low', 'medium', 'high'];
 	const imageBackgrounds = ['auto', 'opaque'];
@@ -1877,6 +1878,7 @@
 												</Tooltip>
 
 												<Dropdown
+													bind:show={showImageOptionsDropdown}
 													side="top"
 													align="start"
 													sideOffset={8}
@@ -1896,13 +1898,24 @@
 													</button>
 
 													<div slot="content" class="space-y-3">
-														<div class="flex items-center justify-between gap-2">
+														<div class="flex items-start justify-between gap-3">
 															<div>
 																<div class="text-sm font-medium">图片参数</div>
 																<div class="text-xs text-gray-500 dark:text-gray-400">
 																	仅用于本次生图请求
 																</div>
 															</div>
+
+															<Tooltip content="关闭" placement="top">
+																<button
+																	type="button"
+																	aria-label="关闭图片参数"
+																	class="size-7 shrink-0 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-hidden"
+																	on:click={() => (showImageOptionsDropdown = false)}
+																>
+																	<XMark className="size-4" strokeWidth="2" />
+																</button>
+															</Tooltip>
 														</div>
 
 														<div class="space-y-2">
