@@ -544,14 +544,15 @@ def _resolve_openai_image_config(request: Request, form_data, user, *, edit: boo
 
 
 def _resolve_image_option(request: Request, form_data, user, key: str, global_value=None):
-    image_settings = _get_user_image_settings(user)
     value = getattr(form_data, key, None)
     if value is not None and value != '':
         return value
 
-    value = _clean_optional_string(image_settings.get(key))
-    if value is not None:
-        return value
+    if key == 'model':
+        image_settings = _get_user_image_settings(user)
+        value = _clean_optional_string(image_settings.get(key))
+        if value is not None:
+            return value
 
     return global_value
 

@@ -134,12 +134,20 @@
 	export let selectedFilterIds = [];
 
 	export let imageGenerationEnabled = false;
+	export let imageGenerationOptions = {
+		size: 'auto',
+		quality: 'auto',
+		background: 'auto'
+	};
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
 	export let pendingOAuthTools = [];
 
 	let showTerminalMenu = false;
+	const imageSizes = ['auto', '1024x1024', '1536x1024', '1024x1536', '2048x2048', '3840x2160', '2160x3840'];
+	const imageQualities = ['auto', 'low', 'medium', 'high'];
+	const imageBackgrounds = ['auto', 'opaque'];
 
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
@@ -178,6 +186,7 @@
 		selectedToolIds,
 		selectedFilterIds,
 		imageGenerationEnabled,
+		imageGenerationOptions,
 		webSearchEnabled,
 		codeInterpreterEnabled
 	});
@@ -1830,21 +1839,62 @@
 										{/if}
 
 										{#if imageGenerationEnabled}
-											<Tooltip content={$i18n.t('Image')} placement="top">
-												<button
-													on:click|preventDefault={() =>
-														(imageGenerationEnabled = !imageGenerationEnabled)}
-													type="button"
-													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
-														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
-														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+											<div
+												class="flex items-center gap-1 rounded-full text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-400/10 border border-sky-200/40 dark:border-sky-500/20 px-1 py-1 max-w-full overflow-x-auto scrollbar-hidden"
+											>
+												<Tooltip content={$i18n.t('Disable Image Generation')} placement="top">
+													<button
+														on:click|preventDefault={() =>
+															(imageGenerationEnabled = !imageGenerationEnabled)}
+														type="button"
+														class="group p-1.5 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden hover:bg-sky-100 dark:hover:bg-sky-700/10"
+													>
+														<Photo className="size-4" strokeWidth="1.75" />
+														<div class="hidden group-hover:block">
+															<XMark className="size-4" strokeWidth="1.75" />
+														</div>
+													</button>
+												</Tooltip>
+
+												<select
+													aria-label={$i18n.t('Image size')}
+													title={$i18n.t('Image size')}
+													class="text-xs rounded-full bg-transparent px-1 py-0.5 outline-hidden max-w-[7.5rem] cursor-pointer"
+													bind:value={imageGenerationOptions.size}
+													on:click|stopPropagation
+													on:mousedown|stopPropagation
 												>
-													<Photo className="size-4" strokeWidth="1.75" />
-													<div class="hidden group-hover:block">
-														<XMark className="size-4" strokeWidth="1.75" />
-													</div>
-												</button>
-											</Tooltip>
+													{#each imageSizes as size}
+														<option value={size}>{size}</option>
+													{/each}
+												</select>
+
+												<select
+													aria-label={$i18n.t('Image quality')}
+													title={$i18n.t('Image quality')}
+													class="text-xs rounded-full bg-transparent px-1 py-0.5 outline-hidden max-w-[5.5rem] cursor-pointer"
+													bind:value={imageGenerationOptions.quality}
+													on:click|stopPropagation
+													on:mousedown|stopPropagation
+												>
+													{#each imageQualities as quality}
+														<option value={quality}>{quality}</option>
+													{/each}
+												</select>
+
+												<select
+													aria-label={$i18n.t('Image background')}
+													title={$i18n.t('Image background')}
+													class="text-xs rounded-full bg-transparent px-1 py-0.5 outline-hidden max-w-[5.5rem] cursor-pointer"
+													bind:value={imageGenerationOptions.background}
+													on:click|stopPropagation
+													on:mousedown|stopPropagation
+												>
+													{#each imageBackgrounds as background}
+														<option value={background}>{background}</option>
+													{/each}
+												</select>
+											</div>
 										{/if}
 
 										{#if codeInterpreterEnabled}

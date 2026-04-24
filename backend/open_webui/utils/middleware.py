@@ -1759,6 +1759,10 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
     metadata = extra_params.get('__metadata__', {})
     chat_id = metadata.get('chat_id', None)
     __event_emitter__ = extra_params.get('__event_emitter__', None)
+    features = extra_params.get('__features__', {}) or {}
+    image_generation_options = features.get('image_generation_options') or {}
+    if not isinstance(image_generation_options, dict):
+        image_generation_options = {}
 
     if not chat_id or not isinstance(chat_id, str) or not __event_emitter__:
         return form_data
@@ -1803,6 +1807,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                     **{
                         'prompt': prompt,
                         'image': input_images,
+                        **image_generation_options,
                         'source_model': form_data.get('model'),
                         'source_model_item': form_data.get('model_item'),
                     }
@@ -1898,6 +1903,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 form_data=CreateImageForm(
                     **{
                         'prompt': prompt,
+                        **image_generation_options,
                         'source_model': form_data.get('model'),
                         'source_model_item': form_data.get('model_item'),
                     }

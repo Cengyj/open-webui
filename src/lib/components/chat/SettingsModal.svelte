@@ -251,9 +251,6 @@
 				'image generation',
 				'image api',
 				'image model',
-				'image size',
-				'quality',
-				'background',
 				'api key'
 			]
 		},

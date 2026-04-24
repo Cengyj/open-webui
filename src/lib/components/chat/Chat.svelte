@@ -151,6 +151,11 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+	let imageGenerationOptions = {
+		size: 'auto',
+		quality: 'auto',
+		background: 'auto'
+	};
 
 	let showCommands = false;
 
@@ -197,6 +202,7 @@
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
+		imageGenerationOptions = { size: 'auto', quality: 'auto', background: 'auto' };
 
 		const storageChatInput = sessionStorage.getItem(
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
@@ -232,6 +238,7 @@
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
+						imageGenerationOptions = input.imageGenerationOptions ?? imageGenerationOptions;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
 				} catch (e) {}
@@ -784,6 +791,7 @@
 				webSearchEnabled = false;
 				imageGenerationEnabled = false;
 				codeInterpreterEnabled = false;
+				imageGenerationOptions = { size: 'auto', quality: 'auto', background: 'auto' };
 
 				try {
 					const input = JSON.parse(storageChatInput);
@@ -795,6 +803,7 @@
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
+						imageGenerationOptions = input.imageGenerationOptions ?? imageGenerationOptions;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
 				} catch (e) {}
@@ -2101,6 +2110,7 @@
 					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
 						? imageGenerationEnabled
 						: false,
+				image_generation_options: imageGenerationEnabled ? imageGenerationOptions : undefined,
 				code_interpreter:
 					$config?.features?.enable_code_interpreter &&
 					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
@@ -2948,9 +2958,10 @@
 									bind:prompt
 									bind:autoScroll
 									bind:selectedToolIds
-									bind:selectedFilterIds
-									bind:imageGenerationEnabled
-									bind:codeInterpreterEnabled
+					bind:selectedFilterIds
+					bind:imageGenerationEnabled
+					bind:imageGenerationOptions
+					bind:codeInterpreterEnabled
 									{pendingOAuthTools}
 									bind:webSearchEnabled
 									bind:atSelectedModel
@@ -3029,9 +3040,10 @@
 									bind:prompt
 									bind:autoScroll
 									bind:selectedToolIds
-									bind:selectedFilterIds
-									bind:imageGenerationEnabled
-									bind:codeInterpreterEnabled
+					bind:selectedFilterIds
+					bind:imageGenerationEnabled
+					bind:imageGenerationOptions
+					bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
