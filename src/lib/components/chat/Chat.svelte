@@ -156,6 +156,11 @@
 		quality: 'auto',
 		background: 'auto'
 	};
+	const getDefaultImageGenerationOptions = () => ({
+		size: $settings?.imageGeneration?.size ?? 'auto',
+		quality: $settings?.imageGeneration?.quality ?? 'auto',
+		background: $settings?.imageGeneration?.background ?? 'auto'
+	});
 
 	let showCommands = false;
 
@@ -202,7 +207,7 @@
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
-		imageGenerationOptions = { size: 'auto', quality: 'auto', background: 'auto' };
+		imageGenerationOptions = getDefaultImageGenerationOptions();
 
 		const storageChatInput = sessionStorage.getItem(
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
@@ -791,7 +796,7 @@
 				webSearchEnabled = false;
 				imageGenerationEnabled = false;
 				codeInterpreterEnabled = false;
-				imageGenerationOptions = { size: 'auto', quality: 'auto', background: 'auto' };
+				imageGenerationOptions = getDefaultImageGenerationOptions();
 
 				try {
 					const input = JSON.parse(storageChatInput);

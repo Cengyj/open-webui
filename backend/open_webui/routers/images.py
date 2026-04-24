@@ -551,7 +551,7 @@ def _resolve_image_option(request: Request, form_data, user, key: str, global_va
     if value is not None and value != '':
         return value
 
-    if key == 'model':
+    if key in {'model', 'size', 'quality', 'background'}:
         image_settings = _get_user_image_settings(user)
         value = _clean_optional_string(image_settings.get(key))
         if value is not None:
