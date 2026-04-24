@@ -41,14 +41,22 @@
 			...config,
 			...($settings?.imageGeneration ?? {})
 		};
+
+		if (config.apiBaseUrl && !config.apiBaseUrl.startsWith('http')) {
+			config.apiBaseUrl = '';
+		}
 	});
 </script>
 
 <form
 	id="tab-image_generation"
 	class="flex flex-col h-full justify-between text-sm"
+	autocomplete="off"
 	on:submit|preventDefault={saveHandler}
 >
+	<input class="hidden" type="text" name="username" autocomplete="username" tabindex="-1" />
+	<input class="hidden" type="password" name="password" autocomplete="current-password" tabindex="-1" />
+
 	<div class="overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 		<div class="font-medium mb-1">{$i18n.t('Image Generation')}</div>
 		<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
@@ -62,8 +70,11 @@
 				</label>
 				<input
 					id="image-api-base-url"
+					name="image-api-base-url"
 					class="w-full mt-1 rounded-lg py-2 px-3 text-sm bg-transparent border dark:border-gray-850 outline-hidden"
-					placeholder="https://api.openai.com/v1"
+					placeholder="https://foropencode.com/v1"
+					autocomplete="off"
+					spellcheck="false"
 					bind:value={config.apiBaseUrl}
 				/>
 			</div>
@@ -74,9 +85,12 @@
 				</label>
 				<input
 					id="image-api-key"
+					name="image-api-token"
 					type="password"
 					class="w-full mt-1 rounded-lg py-2 px-3 text-sm bg-transparent border dark:border-gray-850 outline-hidden"
 					placeholder={$i18n.t('Leave blank to follow the selected direct chat connection')}
+					autocomplete="new-password"
+					spellcheck="false"
 					bind:value={config.apiKey}
 				/>
 			</div>
@@ -87,7 +101,10 @@
 				</label>
 				<input
 					id="image-model"
+					name="image-generation-model"
 					class="w-full mt-1 rounded-lg py-2 px-3 text-sm bg-transparent border dark:border-gray-850 outline-hidden"
+					autocomplete="off"
+					spellcheck="false"
 					bind:value={config.model}
 				/>
 			</div>
@@ -98,8 +115,11 @@
 				</label>
 				<input
 					id="image-api-version"
+					name="image-api-version"
 					class="w-full mt-1 rounded-lg py-2 px-3 text-sm bg-transparent border dark:border-gray-850 outline-hidden"
 					placeholder={$i18n.t('Optional')}
+					autocomplete="off"
+					spellcheck="false"
 					bind:value={config.apiVersion}
 				/>
 			</div>

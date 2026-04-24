@@ -31,6 +31,8 @@
 
 	export let connection = null;
 
+	const DEFAULT_EXTERNAL_API_BASE_URL = 'https://foropencode.com/v1';
+
 	let url = '';
 	let key = '';
 	let auth_type = 'bearer';
@@ -196,7 +198,7 @@
 		loading = false;
 		show = false;
 
-		url = '';
+		url = direct ? DEFAULT_EXTERNAL_API_BASE_URL : '';
 		key = '';
 		auth_type = 'bearer';
 		prefixId = '';
@@ -227,6 +229,8 @@
 				apiVersion = connection.config?.api_version ?? '';
 				apiType = connection.config?.api_type ?? '';
 			}
+		} else if (direct && !ollama) {
+			url = DEFAULT_EXTERNAL_API_BASE_URL;
 		}
 	};
 
