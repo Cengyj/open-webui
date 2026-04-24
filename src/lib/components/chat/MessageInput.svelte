@@ -1861,9 +1861,21 @@
 										{/if}
 
 										{#if imageGenerationEnabled}
-											<div
-												class="inline-flex h-8 max-w-[17rem] items-center overflow-hidden rounded-full text-sky-700 dark:text-sky-200 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/20 border border-sky-200/50 dark:border-sky-500/20 shadow-sm shadow-sky-500/5 transition-colors"
-											>
+											<div class="flex items-center gap-1.5 max-w-full">
+												<Tooltip content={$i18n.t('Disable Image Generation')} placement="top">
+													<button
+														on:click|preventDefault={() =>
+															(imageGenerationEnabled = !imageGenerationEnabled)}
+														type="button"
+														class="group relative size-8 flex items-center justify-center rounded-full text-sky-600 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/20 border border-sky-200/50 dark:border-sky-500/20 transition-colors duration-200 focus:outline-hidden"
+													>
+														<Photo className="size-4 group-hover:opacity-0" strokeWidth="1.75" />
+														<div class="hidden group-hover:flex absolute inset-0 items-center justify-center">
+															<XMark className="size-4" strokeWidth="1.75" />
+														</div>
+													</button>
+												</Tooltip>
+
 												<Dropdown
 													side="top"
 													align="start"
@@ -1872,10 +1884,9 @@
 												>
 													<button
 														type="button"
-														class="h-8 min-w-0 flex items-center gap-2 pl-3 pr-2 text-xs transition-colors focus:outline-hidden"
+														class="h-8 max-w-[15rem] flex items-center gap-2 rounded-full px-3 text-xs text-sky-700 dark:text-sky-200 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/20 border border-sky-200/50 dark:border-sky-500/20 transition-colors focus:outline-hidden"
 														aria-label="图片生成参数"
 													>
-														<Photo className="size-4 shrink-0" strokeWidth="1.75" />
 														<span class="font-medium shrink-0">图片</span>
 														<span class="truncate text-sky-600/80 dark:text-sky-200/80">
 															{formatImageOption(imageGenerationOptions.size)} · {formatImageQuality(
@@ -1948,19 +1959,6 @@
 														</div>
 													</div>
 												</Dropdown>
-
-												<div class="h-4 w-px bg-sky-200/70 dark:bg-sky-500/20" />
-
-												<Tooltip content="关闭生图" placement="top">
-													<button
-														type="button"
-														aria-label="关闭生图"
-														class="group mr-0.5 size-7 shrink-0 rounded-full flex items-center justify-center text-sky-600/80 hover:text-white hover:bg-sky-500 dark:text-sky-200/80 dark:hover:text-white dark:hover:bg-sky-500 transition-colors focus:outline-hidden"
-														on:click|preventDefault={() => (imageGenerationEnabled = false)}
-													>
-														<XMark className="size-3.5 transition-transform group-hover:scale-110" strokeWidth="2" />
-													</button>
-												</Tooltip>
 											</div>
 										{/if}
 
