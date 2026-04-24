@@ -149,10 +149,54 @@
 	const imageSizes = ['auto', '1024x1024', '1536x1024', '1024x1536', '2048x2048', '3840x2160', '2160x3840'];
 	const imageQualities = ['auto', 'low', 'medium', 'high'];
 	const imageBackgrounds = ['auto', 'opaque'];
+	let customImageSize = '';
+	let imageSizeError = '';
+	const normalizeImageSize = (value: string) => value.trim().toLowerCase().replace('×', 'x');
+	const validateImageSize = (value: string) => {
+		const size = normalizeImageSize(value);
+		if (!size || size === 'auto') return { valid: true, value: 'auto', message: '' };
+
+		const match = size.match(/^(\d+)x(\d+)$/);
+		if (!match) {
+			return { valid: false, value: 'auto', message: '请输入 宽x高，例如 3840x2160' };
+		}
+
+		const width = Number(match[1]);
+		const height = Number(match[2]);
+		if (width <= 0 || height <= 0) {
+			return { valid: false, value: 'auto', message: '宽高必须大于 0' };
+		}
+		if (Math.max(width, height) > 3840) {
+			return { valid: false, value: 'auto', message: '最大边不能超过 3840' };
+		}
+		if (width % 16 !== 0 || height % 16 !== 0) {
+			return { valid: false, value: 'auto', message: '宽高都必须是 16 的倍数' };
+		}
+		if (Math.max(width, height) / Math.min(width, height) > 3) {
+			return { valid: false, value: 'auto', message: '长宽比不能超过 3:1' };
+		}
+
+		return { valid: true, value: `${width}x${height}`, message: '' };
+	};
+	const applyImageSize = (value: string) => {
+		const result = validateImageSize(value);
+		imageGenerationOptions.size = result.value;
+		imageSizeError = result.message;
+
+		if (!result.valid) {
+			customImageSize = '';
+			toast.error(`${result.message}，已回退为自动`);
+		} else if (result.value !== 'auto') {
+			customImageSize = result.value;
+		}
+	};
 	const formatImageOption = (value: string) => {
 		if (!value) return 'Auto';
 		return value === 'auto' ? 'Auto' : value.replace('x', '×');
 	};
+	$: if (imageGenerationOptions?.size && !imageSizes.includes(imageGenerationOptions.size)) {
+		customImageSize = imageGenerationOptions.size;
+	}
 	const formatImageQuality = (value: string) => {
 		return (
 			{
@@ -1882,7 +1926,7 @@
 													side="top"
 													align="start"
 													sideOffset={8}
-													contentClass="z-50 w-[18rem] rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl p-3 text-gray-700 dark:text-gray-200"
+													contentClass="z-50 w-[21rem] rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl p-3 text-gray-700 dark:text-gray-200"
 												>
 													<button
 														type="button"
@@ -1918,20 +1962,52 @@
 															</Tooltip>
 														</div>
 
-														<div class="space-y-2">
-															<div class="text-xs font-medium text-gray-500 dark:text-gray-400">分辨率</div>
-															<div class="grid grid-cols-2 gap-1.5">
+														<div class="space-y-2 rounded-2xl bg-gray-50/80 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-800 p-2.5">
+															<div class="flex items-center justify-between gap-2">
+																<div class="text-xs font-medium text-gray-600 dark:text-gray-300">分辨率</div>
+																<div class="text-[11px] text-gray-400 dark:text-gray-500">最大 3840 · 16 倍数</div>
+															</div>
+															<div class="grid grid-cols-3 gap-1.5">
 																{#each imageSizes as size}
 																	<button
 																		type="button"
-																		class="rounded-xl px-2.5 py-1.5 text-xs text-left transition {imageGenerationOptions.size === size
+																		class="rounded-xl px-2 py-1.5 text-xs text-center transition {imageGenerationOptions.size === size
 																			? 'bg-sky-100 text-sky-700 dark:bg-sky-400/20 dark:text-sky-200'
-																			: 'hover:bg-gray-50 dark:hover:bg-gray-800'}"
-																		on:click={() => (imageGenerationOptions.size = size)}
+																			: 'bg-white/70 hover:bg-white dark:bg-gray-900/60 dark:hover:bg-gray-800'}"
+																		on:click={() => applyImageSize(size)}
 																	>
 																		{formatImageOption(size)}
 																	</button>
 																{/each}
+															</div>
+
+															<div class="flex items-center gap-2">
+																<input
+																	class="min-w-0 flex-1 rounded-xl px-3 py-2 text-xs bg-white/80 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 outline-hidden focus:border-sky-300 dark:focus:border-sky-500 transition"
+																	placeholder="自定义，如 3840x2160"
+																	bind:value={customImageSize}
+																	spellcheck="false"
+																	on:keydown={(event) => {
+																		if (event.key === 'Enter') {
+																			event.preventDefault();
+																			applyImageSize(customImageSize);
+																		}
+																	}}
+																	on:blur={() => {
+																		if (customImageSize.trim()) applyImageSize(customImageSize);
+																	}}
+																/>
+																<button
+																	type="button"
+																	class="shrink-0 rounded-xl px-3 py-2 text-xs font-medium bg-gray-900 text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition"
+																	on:click={() => applyImageSize(customImageSize)}
+																>
+																	应用
+																</button>
+															</div>
+
+															<div class="text-[11px] {imageSizeError ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}">
+																{imageSizeError || '规则：最大边 ≤ 3840，宽高为 16 的倍数，比例不超过 3:1'}
 															</div>
 														</div>
 

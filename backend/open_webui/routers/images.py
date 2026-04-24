@@ -473,6 +473,33 @@ def _clean_api_base_url(value):
     return None
 
 
+def _normalize_gpt_image_size(value):
+    value = _clean_optional_string(value)
+    if not value:
+        return None
+
+    value = value.lower().replace('×', 'x')
+    if value == 'auto':
+        return 'auto'
+
+    match = re.match(r'^(\d+)x(\d+)$', value)
+    if not match:
+        return 'auto'
+
+    width = int(match.group(1))
+    height = int(match.group(2))
+    if width <= 0 or height <= 0:
+        return 'auto'
+    if max(width, height) > 3840:
+        return 'auto'
+    if width % 16 != 0 or height % 16 != 0:
+        return 'auto'
+    if max(width, height) / min(width, height) > 3:
+        return 'auto'
+
+    return f'{width}x{height}'
+
+
 def _resolve_direct_connection_by_index(direct_connections: dict, url_idx) -> tuple[str | None, str | None]:
     try:
         url_idx = int(url_idx)
@@ -568,13 +595,20 @@ def _resolve_openai_image_config(request: Request, form_data, user, *, edit: boo
 def _resolve_image_option(request: Request, form_data, user, key: str, global_value=None):
     value = getattr(form_data, key, None)
     if value is not None and value != '':
+        if key == 'size':
+            return _normalize_gpt_image_size(value)
         return value
 
     if key in {'model', 'size', 'quality', 'background'}:
         image_settings = _get_user_image_settings(user)
         value = _clean_optional_string(image_settings.get(key))
         if value is not None:
+            if key == 'size':
+                return _normalize_gpt_image_size(value)
             return value
+
+    if key == 'size':
+        return _normalize_gpt_image_size(global_value)
 
     return global_value
 

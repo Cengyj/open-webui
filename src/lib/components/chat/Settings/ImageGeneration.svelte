@@ -19,17 +19,53 @@
 	const sizes = ['auto', '1024x1024', '1536x1024', '1024x1536', '2048x2048', '3840x2160', '2160x3840'];
 	const qualities = ['auto', 'low', 'medium', 'high'];
 	const backgrounds = ['auto', 'opaque'];
+	let customSize = '';
+	let sizeError = '';
 
 	const formatSize = (value: string) => (value === 'auto' ? '自动' : value.replace('x', '×'));
 	const formatQuality = (value: string) =>
 		({ auto: '自动', low: '低', medium: '中', high: '高' })[value] ?? '自动';
 	const formatBackground = (value: string) => ({ auto: '自动', opaque: '不透明' })[value] ?? '自动';
+	const normalizeSize = (value: string) => value.trim().toLowerCase().replace('×', 'x');
+	const validateSize = (value: string) => {
+		const size = normalizeSize(value);
+		if (!size || size === 'auto') return { valid: true, value: 'auto', message: '' };
+
+		const match = size.match(/^(\d+)x(\d+)$/);
+		if (!match) return { valid: false, value: 'auto', message: '请输入 宽x高，例如 3840x2160' };
+
+		const width = Number(match[1]);
+		const height = Number(match[2]);
+		if (width <= 0 || height <= 0) return { valid: false, value: 'auto', message: '宽高必须大于 0' };
+		if (Math.max(width, height) > 3840) return { valid: false, value: 'auto', message: '最大边不能超过 3840' };
+		if (width % 16 !== 0 || height % 16 !== 0) {
+			return { valid: false, value: 'auto', message: '宽高都必须是 16 的倍数' };
+		}
+		if (Math.max(width, height) / Math.min(width, height) > 3) {
+			return { valid: false, value: 'auto', message: '长宽比不能超过 3:1' };
+		}
+
+		return { valid: true, value: `${width}x${height}`, message: '' };
+	};
+	const applySize = (value: string) => {
+		const result = validateSize(value);
+		config.size = result.value;
+		sizeError = result.message;
+		customSize = result.valid && result.value !== 'auto' ? result.value : '';
+	};
 
 	const saveHandler = async () => {
+		if (customSize.trim()) {
+			applySize(customSize);
+		}
+
 		config.apiBaseUrl = config.apiBaseUrl.replace(/\/$/, '').trim();
 		config.apiKey = config.apiKey.trim();
 		config.apiVersion = config.apiVersion.trim();
 		config.model = config.model.trim() || 'gpt-image-2';
+		const sizeResult = validateSize(config.size);
+		config.size = sizeResult.value;
+		sizeError = sizeResult.message;
 
 		await saveSettings({
 			imageGeneration: config
@@ -44,6 +80,10 @@
 
 		if (config.apiBaseUrl && !config.apiBaseUrl.startsWith('http')) {
 			config.apiBaseUrl = '';
+		}
+
+		if (config.size && !sizes.includes(config.size)) {
+			customSize = config.size;
 		}
 	});
 </script>
@@ -130,22 +170,58 @@
 					聊天中开启生图时会默认使用这些参数，仍可在输入框的图片参数卡片里临时调整。
 				</div>
 
-				<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-					<div>
+				<div class="grid grid-cols-1 gap-3">
+					<div class="rounded-2xl border border-gray-100 dark:border-gray-850 bg-gray-50/70 dark:bg-gray-950/30 p-3">
 						<label class="text-xs text-gray-500 dark:text-gray-400" for="image-size">
 							分辨率
 						</label>
-						<select
-							id="image-size"
-							class="w-full mt-1 rounded-lg py-2 px-3 text-sm bg-transparent border dark:border-gray-850 outline-hidden"
-							bind:value={config.size}
-						>
+						<div class="grid grid-cols-2 md:grid-cols-4 gap-1.5 mt-2">
 							{#each sizes as size}
-								<option value={size}>{formatSize(size)}</option>
+								<button
+									type="button"
+									class="rounded-xl px-2.5 py-2 text-xs transition {config.size === size
+										? 'bg-sky-100 text-sky-700 dark:bg-sky-400/20 dark:text-sky-200'
+										: 'bg-white/80 hover:bg-white dark:bg-gray-900/60 dark:hover:bg-gray-800'}"
+									on:click={() => applySize(size)}
+								>
+									{formatSize(size)}
+								</button>
 							{/each}
-						</select>
-					</div>
+						</div>
 
+						<div class="flex items-center gap-2 mt-2">
+							<input
+								id="image-size"
+								class="min-w-0 flex-1 rounded-xl py-2 px-3 text-sm bg-white/80 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 outline-hidden focus:border-sky-300 dark:focus:border-sky-500 transition"
+								placeholder="自定义，如 3840x2160"
+								bind:value={customSize}
+								spellcheck="false"
+								on:keydown={(event) => {
+									if (event.key === 'Enter') {
+										event.preventDefault();
+										applySize(customSize);
+									}
+								}}
+								on:blur={() => {
+									if (customSize.trim()) applySize(customSize);
+								}}
+							/>
+							<button
+								type="button"
+								class="shrink-0 rounded-xl px-3 py-2 text-sm font-medium bg-gray-900 text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition"
+								on:click={() => applySize(customSize)}
+							>
+								应用
+							</button>
+						</div>
+
+						<div class="mt-1.5 text-xs {sizeError ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}">
+							{sizeError || '规则：最大边 ≤ 3840，宽高为 16 的倍数，比例不超过 3:1；不符合会回退为自动。'}
+						</div>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
 					<div>
 						<label class="text-xs text-gray-500 dark:text-gray-400" for="image-quality">
 							质量
